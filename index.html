@@ -76,6 +76,24 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
 
 .hide{opacity:0;transform:translateY(14px);pointer-events:none}
 
+.panel{
+  position:fixed;right:clamp(20px,4vw,54px);top:50%;
+  transform:translateY(-50%) translateX(16px);
+  width:min(300px,30vw);opacity:0;pointer-events:none;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  padding:24px 22px;border:1px solid rgba(255,255,255,.1);
+  transition:opacity .45s ease,transform .45s cubic-bezier(.2,.8,.3,1);
+}
+.panel.on{opacity:1;transform:translateY(-50%)}
+.panel .p-label{display:block;opacity:.4;margin-bottom:12px}
+.p-skills{list-style:none;margin:0 0 28px}
+.p-skills li{font-size:12.5px;line-height:1.5;opacity:.78;padding:8px 0;border-top:1px solid rgba(255,255,255,.12);display:flex;gap:10px}
+.p-skills li:last-child{border-bottom:1px solid rgba(255,255,255,.12)}
+.p-skills li::before{content:'+';opacity:.4}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border:1px solid rgba(255,255,255,.22);padding:6px 10px;font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;opacity:.8;font-family:'DM Mono',monospace}
+@media(max-width:900px){.panel{display:none}}
+
 .hint{
   position:absolute;left:50%;bottom:clamp(30px,5vw,54px);transform:translateX(-50%);
   opacity:.32;transition:opacity .4s;white-space:nowrap;
@@ -138,6 +156,13 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
       </div>
     </div>
   </div>
+
+  <aside class="panel" id="panel" aria-live="polite">
+    <span class="mono p-label">Skills &amp; capabilities</span>
+    <ul class="p-skills" id="pSkills"></ul>
+    <span class="mono p-label">Connectors</span>
+    <div class="chips" id="pConns"></div>
+  </aside>
 </div>
 
 <div class="fallback" id="fallback">
@@ -159,11 +184,21 @@ if(!window.THREE){document.getElementById('fallback').style.display='flex';retur
 var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 var BOTS = [
-  {name:'Milo',  role:'Admin',           does:'Runs your calendar, chases what is outstanding, keeps every project moving.'},
-  {name:'Pizza', role:'Creative',        does:'Makes the graphics, writes the copy, keeps everything looking like you.'},
-  {name:'Ruby',  role:'Sales & support', does:'Answers enquiries fast, follows up on quotes, keeps customers warm.'},
-  {name:'Coco',  role:'Marketing',       does:'Plans the campaigns and posts them, on schedule, without reminders.'},
-  {name:'Sable', role:'Trader',          does:'Watches the market and moves on it, inside limits you set.'}
+  {name:'Milo',  role:'Admin',           does:'Runs your calendar, chases what is outstanding, keeps every project moving.',
+   skills:['Calendar & scheduling','Follow-ups & reminders','Project tracking','Meeting notes & recaps','Daily agenda briefs'],
+   conns:['Discord','Slack','WhatsApp','Google Calendar','Gmail','Notion']},
+  {name:'Pizza', role:'Creative',        does:'Makes the graphics, writes the copy, keeps everything looking like you.',
+   skills:['Social graphics on demand','Ad creatives','Copywriting in your voice','Brand consistency checks','Image editing & resizing'],
+   conns:['Discord','Slack','WhatsApp','Canva','Figma','Google Drive']},
+  {name:'Ruby',  role:'Sales & support', does:'Answers enquiries fast, follows up on quotes, keeps customers warm.',
+   skills:['Instant first replies','Quote & invoice follow-ups','FAQ handling','Lead qualification','Warm handoff to humans'],
+   conns:['Discord','Slack','WhatsApp','Gmail','Shopify','Notion CRM']},
+  {name:'Coco',  role:'Marketing',       does:'Plans the campaigns and posts them, on schedule, without reminders.',
+   skills:['Content calendar','Scheduled posting','Campaign planning','Caption & hook writing','Performance recaps'],
+   conns:['Discord','Slack','WhatsApp','Instagram','Facebook','TikTok']},
+  {name:'Sable', role:'Trader',          does:'Watches the market and moves on it, inside limits you set.',
+   skills:['24/7 market watch','Rule-based entries & exits','Hard risk limits & stops','Position sizing','Trade journal & recaps'],
+   conns:['Discord','Slack','OKX','Binance','TradingView','Google Sheets']}
 ];
 
 var stage = document.getElementById('stage');
@@ -377,8 +412,11 @@ function select(b){
   document.getElementById('cDoes').textContent = info.does;
   document.getElementById('cHire').href = 'mailto:hello@nitron.studio?subject=' + encodeURIComponent('Hire ' + info.name);
   document.getElementById('cCustom').href = 'mailto:hello@nitron.studio?subject=' + encodeURIComponent('Customize a bot like ' + info.name);
+  document.getElementById('pSkills').innerHTML = info.skills.map(function(s){ return '<li>' + s + '</li>'; }).join('');
+  document.getElementById('pConns').innerHTML = info.conns.map(function(c){ return '<span class="chip">' + c + '</span>'; }).join('');
   elCopy.classList.add('hide');
   elCard.classList.add('on');
+  document.getElementById('panel').classList.add('on');
   elHint.style.opacity = 0;
 }
 
@@ -387,6 +425,7 @@ function clear(){
   layout();
   elCopy.classList.remove('hide');
   elCard.classList.remove('on');
+  document.getElementById('panel').classList.remove('on');
   elHint.style.opacity = .32;
 }
 
