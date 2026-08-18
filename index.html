@@ -368,58 +368,66 @@ function buildBot(i){
     roughness:.35, metalness:0, transparent:true, opacity:1
   });
 
+  /* Every dimension below is measured off ~/Downloads/123.png and scaled to a
+     2.70-unit figure (505px tall in the reference => 0.005347 units per px).
+     The panel is deliberately WIDE and SHORT (0.93 x 0.66) — that letterbox
+     ratio is what makes the face read correctly; a square panel does not. */
+
   // ---- head ----
   var head = new THREE.Group();
-  head.add(part(squircle(.94,.92,.86,7), shell, 0, 0, 0));          // helmet
-  head.add(part(squircle(.80,.78,.62,5), screen, 0, -.02, .15));    // face panel, proud of the shell
-  head.add(part(squircle(.115,.235,.10,3.4), glow, -.25, -.09, .48));
-  head.add(part(squircle(.115,.235,.10,3.4), glow,  .25, -.09, .48));
-  head.position.set(0, 2.22, 0);
+  head.add(part(squircle(1.05,.87,.95,3.6), shell, 0, 0, 0));         // helmet
+  head.add(part(squircle(.93,.66,.70,4), screen, 0, -.02, .20));      // face panel, proud of the shell
+  head.add(part(squircle(.091,.187,.09,3), glow, -.225, -.06, .50));  // eyes
+  head.add(part(squircle(.091,.187,.09,3), glow,  .225, -.06, .50));
+  head.position.set(0, 2.26, 0);
   g.add(head);
 
-  // ---- sweater: boxy, dropped shoulders, rolled collar ----
-  var collar = part(new THREE.TorusGeometry(.23,.085,12,26), cloth, 0, 1.68, 0);
+  // ---- narrow neck + rolled collar (the reference pinches to ~0.59 here) ----
+  g.add(part(squircle(.44,.22,.42,3), cloth, 0, 1.80, 0));
+  var collar = part(new THREE.TorusGeometry(.24,.085,12,26), cloth, 0, 1.72, 0);
   collar.rotation.x = Math.PI/2; g.add(collar);
-  g.add(part(squircle(1.06,.80,.74,4), cloth, 0, 1.29, 0));
 
-  // sleeves hang straight and wide, ending above the gloves
-  var aL = part(squircle(.31,.58,.32,4), cloth, -.58, 1.28, 0);
-  aL.rotation.z =  .05; g.add(aL);
-  var aR = part(squircle(.31,.58,.32,4), cloth, .58, 1.28, 0);
-  aR.rotation.z = -.05; g.add(aR);
+  // ---- oversized knit sweater ----
+  g.add(part(squircle(.84,.86,.72,3.4), cloth, 0, 1.22, 0));
 
-  // ---- gloves, with fingers ----
+  // sleeves sit outboard for the dropped-shoulder silhouette
+  var aL = part(squircle(.32,.70,.34,3.6), cloth, -.47, 1.30, 0);
+  aL.rotation.z =  .04; g.add(aL);
+  var aR = part(squircle(.32,.70,.34,3.6), cloth, .47, 1.30, 0);
+  aR.rotation.z = -.04; g.add(aR);
+
+  // ---- gloves, hanging clear of the cuffs ----
   function glove(sx){
     var h = new THREE.Group();
-    h.add(part(squircle(.24,.24,.20,4), dark, 0, 0, 0));                 // palm
+    h.add(part(squircle(.25,.26,.21,3.4), dark, 0, 0, 0));               // palm
     for(var f=0; f<4; f++){
-      h.add(part(squircle(.048,.17,.05,3), dark, -.075 + f*.05, -.18, .02));
+      h.add(part(squircle(.05,.18,.055,3), dark, -.078 + f*.052, -.19, .015));
     }
-    h.add(part(squircle(.055,.12,.055,3), dark, sx*.12, -.08, .06));     // thumb
-    h.position.set(sx*.58, .90, .02);
+    h.add(part(squircle(.06,.13,.06,3), dark, sx*.13, -.07, .055));      // thumb
+    h.position.set(sx*.51, .84, .02);
     return h;
   }
   g.add(glove(-1)); g.add(glove(1));
 
   // ---- sling strap across the chest, and its back run ----
-  var sF = part(new THREE.BoxGeometry(.12,1.00,.05), dark, 0, 1.30, .42);
-  sF.rotation.z = .62; g.add(sF);
-  var sB = part(new THREE.BoxGeometry(.12,1.00,.05), dark, 0, 1.30, -.42);
-  sB.rotation.z = -.62; g.add(sB);
-  g.add(part(squircle(.26,.20,.14,4), dark, .40, .96, .30));            // hip pouch
+  var sF = part(new THREE.BoxGeometry(.11,.98,.05), dark, 0, 1.24, .40);
+  sF.rotation.z = .60; g.add(sF);
+  var sB = part(new THREE.BoxGeometry(.11,.98,.05), dark, 0, 1.24, -.40);
+  sB.rotation.z = -.60; g.add(sB);
+  g.add(part(squircle(.24,.19,.13,3.4), dark, .36, .90, .30));           // hip pouch
 
-  // ---- cargo pants ----
-  g.add(part(squircle(.94,.38,.74,4), dark, 0, .94, 0));                 // hips
-  g.add(part(squircle(.42,.76,.50,4), dark, -.23, .58, 0));
-  g.add(part(squircle(.42,.76,.50,4), dark,  .23, .58, 0));
-  g.add(part(squircle(.10,.24,.30,3), dark, -.44, .60, 0));              // side pockets
-  g.add(part(squircle(.10,.24,.30,3), dark,  .44, .60, 0));
+  // ---- baggy cargo pants ----
+  g.add(part(squircle(.82,.34,.68,3.4), dark, 0, .72, 0));               // hips
+  g.add(part(squircle(.38,.72,.46,3.4), dark, -.20, .44, 0));
+  g.add(part(squircle(.38,.72,.46,3.4), dark,  .20, .44, 0));
+  g.add(part(squircle(.11,.26,.33,3), dark, -.39, .46, 0));              // cargo pockets
+  g.add(part(squircle(.11,.26,.33,3), dark,  .39, .46, 0));
 
   // ---- chunky sneakers ----
-  g.add(part(squircle(.40,.24,.62,4), shell, -.23, .19, .09));
-  g.add(part(squircle(.40,.24,.62,4), shell,  .23, .19, .09));
-  g.add(part(squircle(.43,.10,.65,3), shell, -.23, .07, .09));           // soles
-  g.add(part(squircle(.43,.10,.65,3), shell,  .23, .07, .09));
+  g.add(part(squircle(.44,.20,.64,3.4), shell, -.23, .14, .10));
+  g.add(part(squircle(.44,.20,.64,3.4), shell,  .23, .14, .10));
+  g.add(part(squircle(.46,.09,.66,3), shell, -.23, .05, .10));           // soles
+  g.add(part(squircle(.46,.09,.66,3), shell,  .23, .05, .10));
 
   // ---- role accessory (rides on the head group) ----
   if(i===0){            // Milo — halo ring
