@@ -276,23 +276,26 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 stage.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.22));
+scene.add(new THREE.AmbientLight(0xffffff, 0.26));
+// gentle sky/bounce gradient so the shadow side keeps its form instead of going flat black
+scene.add(new THREE.HemisphereLight(0xffffff, 0x555555, 0.32));
 
-var key = new THREE.DirectionalLight(0xffffff, 1.15);
+var key = new THREE.DirectionalLight(0xffffff, 1.12);
 key.position.set(4.5, 9, 7);
 key.castShadow = true;
-key.shadow.mapSize.set(1024,1024);
+key.shadow.mapSize.set(2048,2048);
 key.shadow.camera.left = -14; key.shadow.camera.right = 14;
 key.shadow.camera.top = 14;   key.shadow.camera.bottom = -8;
 key.shadow.camera.far = 36;
 key.shadow.bias = -0.0012;
+key.shadow.radius = 3;
 scene.add(key);
 
 var rim = new THREE.DirectionalLight(0xffffff, 0.95);
 rim.position.set(-7, 4.5, -6);
 scene.add(rim);
 
-var fill = new THREE.DirectionalLight(0xffffff, 0.28);
+var fill = new THREE.DirectionalLight(0xffffff, 0.34);
 fill.position.set(-3, 2, 8);
 scene.add(fill);
 
@@ -325,132 +328,163 @@ function part(g, m, x, y, z){
   return mesh;
 }
 
-/* One shared astronaut chassis — glossy helmet, black face screen with
-   glowing eyes, knit hoodie, sling strap, cargo pants, chunky sneakers.
-   Each unit gets a role accessory on top. */
+/* Superellipsoid: |x/a|^r + |y/b|^r + |z/c|^r = 1.
+   r=2 is a sphere, r>=6 a rounded box. This is what lets the helmet read as a
+   squircle with an inset face panel instead of a ball — three.js core ships no
+   rounded-box geometry, so we remap a sphere's vertices onto the solid.
+   Cached because all twelve units share the same shapes. */
+var _sq = {};
+function squircle(w,h,d,r,seg){
+  seg = seg || 40;
+  var key = w+'_'+h+'_'+d+'_'+r+'_'+seg;
+  if(_sq[key]) return _sq[key];
+  var g = new THREE.SphereGeometry(.5, seg, Math.round(seg/2));
+  var p = g.attributes.position, v = new THREE.Vector3();
+  for(var i=0;i<p.count;i++){
+    v.set(p.getX(i), p.getY(i), p.getZ(i)).normalize();
+    var s = Math.pow(
+      Math.pow(Math.abs(v.x),r) + Math.pow(Math.abs(v.y),r) + Math.pow(Math.abs(v.z),r),
+      -1/r
+    );
+    p.setXYZ(i, v.x*s*w/2, v.y*s*h/2, v.z*s*d/2);
+  }
+  g.computeVertexNormals();
+  _sq[key] = g;
+  return g;
+}
+
+/* One shared astronaut chassis, proportioned from the reference turnaround:
+   head ~34% of total height, nearly as wide as the shoulders. Squircle helmet,
+   inset black face panel with a white rim, capsule eyes, oversized knit
+   sweater, sling strap, cargo pants, chunky sneakers. Role accessory on top. */
 function buildBot(i){
   var g = new THREE.Group();
-  var shell  = mat(.28,.05);            // glossy white — helmet, sneakers
-  var cloth  = mat(.85,0,0xf0f0f0);     // knit hoodie
-  var dark   = mat(.6,.05,0x161616);    // pants, strap, hands
-  var screen = mat(.18,.1,0x0a0a0a);    // face glass
+  var shell  = mat(.34,.04);            // helmet + sneakers
+  var cloth  = mat(.72,0,0xf2f2f2);     // knit sweater
+  var dark   = mat(.52,.04,0x141414);   // pants, strap, gloves
+  var screen = mat(.14,.12,0x090909);   // face panel
   var glow = new THREE.MeshStandardMaterial({
-    color:0xffffff, emissive:0xffffff, emissiveIntensity:1.4,
-    roughness:.4, metalness:0, transparent:true, opacity:1
+    color:0xffffff, emissive:0xffffff, emissiveIntensity:1.5,
+    roughness:.35, metalness:0, transparent:true, opacity:1
   });
 
-  // head: helmet + face screen + eyes (grouped so it can look around)
+  // ---- head ----
   var head = new THREE.Group();
-  var helmet = part(new THREE.SphereGeometry(.66,32,24), shell, 0, 0, 0);
-  helmet.scale.set(1,.92,.96);
-  head.add(helmet);
-  var face = part(new THREE.SphereGeometry(.5,28,20), screen, 0, -.03, .42);
-  face.scale.set(1.04,.84,.6);
-  head.add(face);
-  var eL = part(new THREE.SphereGeometry(.07,14,10), glow, -.17, 0, .68);
-  eL.scale.set(.72,1.7,.5); head.add(eL);
-  var eR = part(new THREE.SphereGeometry(.07,14,10), glow, .17, 0, .68);
-  eR.scale.set(.72,1.7,.5); head.add(eR);
-  head.position.set(0, 1.95, 0);
+  head.add(part(squircle(.94,.92,.86,7), shell, 0, 0, 0));          // helmet
+  head.add(part(squircle(.80,.78,.62,5), screen, 0, -.02, .15));    // face panel, proud of the shell
+  head.add(part(squircle(.115,.235,.10,3.4), glow, -.25, -.09, .48));
+  head.add(part(squircle(.115,.235,.10,3.4), glow,  .25, -.09, .48));
+  head.position.set(0, 2.22, 0);
   g.add(head);
 
-  // hoodie
-  var collar = part(new THREE.TorusGeometry(.3,.1,12,26), cloth, 0, 1.42, 0);
+  // ---- sweater: boxy, dropped shoulders, rolled collar ----
+  var collar = part(new THREE.TorusGeometry(.23,.085,12,26), cloth, 0, 1.68, 0);
   collar.rotation.x = Math.PI/2; g.add(collar);
-  g.add(part(new THREE.CylinderGeometry(.42,.56,.8,26), cloth, 0, 1.02, 0));
+  g.add(part(squircle(1.06,.80,.74,4), cloth, 0, 1.29, 0));
 
-  // arms + hands
-  var aL = part(new THREE.CylinderGeometry(.13,.15,.6,16), cloth, -.56, .98, 0);
-  aL.rotation.z = .14; g.add(aL);
-  var aR = part(new THREE.CylinderGeometry(.13,.15,.6,16), cloth, .56, .98, 0);
-  aR.rotation.z = -.14; g.add(aR);
-  g.add(part(new THREE.SphereGeometry(.12,14,10), dark, -.64, .62, 0));
-  g.add(part(new THREE.SphereGeometry(.12,14,10), dark, .64, .62, 0));
+  // sleeves hang straight and wide, ending above the gloves
+  var aL = part(squircle(.31,.58,.32,4), cloth, -.58, 1.28, 0);
+  aL.rotation.z =  .05; g.add(aL);
+  var aR = part(squircle(.31,.58,.32,4), cloth, .58, 1.28, 0);
+  aR.rotation.z = -.05; g.add(aR);
 
-  // sling strap over the shoulder, front + back, with a pouch at the hip
-  var sF = part(new THREE.BoxGeometry(.15,1.05,.06), dark, 0, 1.02, .47);
+  // ---- gloves, with fingers ----
+  function glove(sx){
+    var h = new THREE.Group();
+    h.add(part(squircle(.24,.24,.20,4), dark, 0, 0, 0));                 // palm
+    for(var f=0; f<4; f++){
+      h.add(part(squircle(.048,.17,.05,3), dark, -.075 + f*.05, -.18, .02));
+    }
+    h.add(part(squircle(.055,.12,.055,3), dark, sx*.12, -.08, .06));     // thumb
+    h.position.set(sx*.58, .90, .02);
+    return h;
+  }
+  g.add(glove(-1)); g.add(glove(1));
+
+  // ---- sling strap across the chest, and its back run ----
+  var sF = part(new THREE.BoxGeometry(.12,1.00,.05), dark, 0, 1.30, .42);
   sF.rotation.z = .62; g.add(sF);
-  var sB = part(new THREE.BoxGeometry(.15,1.05,.06), dark, 0, 1.02, -.47);
+  var sB = part(new THREE.BoxGeometry(.12,1.00,.05), dark, 0, 1.30, -.42);
   sB.rotation.z = -.62; g.add(sB);
-  g.add(part(new THREE.BoxGeometry(.28,.2,.16), dark, .42, .6, .3));
+  g.add(part(squircle(.26,.20,.14,4), dark, .40, .96, .30));            // hip pouch
 
-  // cargo pants + side pockets
-  g.add(part(new THREE.BoxGeometry(.66,.3,.46), dark, 0, .56, 0));
-  g.add(part(new THREE.CylinderGeometry(.15,.17,.44,16), dark, -.18, .36, 0));
-  g.add(part(new THREE.CylinderGeometry(.15,.17,.44,16), dark, .18, .36, 0));
-  g.add(part(new THREE.BoxGeometry(.09,.18,.28), dark, -.36, .44, 0));
-  g.add(part(new THREE.BoxGeometry(.09,.18,.28), dark, .36, .44, 0));
+  // ---- cargo pants ----
+  g.add(part(squircle(.94,.38,.74,4), dark, 0, .94, 0));                 // hips
+  g.add(part(squircle(.42,.76,.50,4), dark, -.23, .58, 0));
+  g.add(part(squircle(.42,.76,.50,4), dark,  .23, .58, 0));
+  g.add(part(squircle(.10,.24,.30,3), dark, -.44, .60, 0));              // side pockets
+  g.add(part(squircle(.10,.24,.30,3), dark,  .44, .60, 0));
 
-  // sneakers
-  g.add(part(new THREE.BoxGeometry(.28,.17,.48), shell, -.18, .1, .05));
-  g.add(part(new THREE.BoxGeometry(.28,.17,.48), shell, .18, .1, .05));
+  // ---- chunky sneakers ----
+  g.add(part(squircle(.40,.24,.62,4), shell, -.23, .19, .09));
+  g.add(part(squircle(.40,.24,.62,4), shell,  .23, .19, .09));
+  g.add(part(squircle(.43,.10,.65,3), shell, -.23, .07, .09));           // soles
+  g.add(part(squircle(.43,.10,.65,3), shell,  .23, .07, .09));
 
-  // role accessory (attached to the head so it moves with it)
+  // ---- role accessory (rides on the head group) ----
   if(i===0){            // Milo — halo ring
-    var halo = part(new THREE.TorusGeometry(.4,.045,10,36), shell, 0, .85, 0);
+    var halo = part(new THREE.TorusGeometry(.36,.042,10,36), shell, 0, .62, 0);
     halo.rotation.x = Math.PI/2; head.add(halo);
   }
   else if(i===1){       // Pizza — tilted beret
-    var beret = part(new THREE.CylinderGeometry(.32,.38,.1,22), dark, .22, .56, 0);
-    beret.rotation.z = -.38; head.add(beret);
-    head.add(part(new THREE.SphereGeometry(.05,10,8), dark, .36, .68, 0));
+    var beret = part(new THREE.CylinderGeometry(.30,.35,.09,22), dark, .16, .48, 0);
+    beret.rotation.z = -.35; head.add(beret);
+    head.add(part(new THREE.SphereGeometry(.045,10,8), dark, .27, .58, 0));
   }
   else if(i===2){       // Ruby — headset + mic
-    var band = part(new THREE.TorusGeometry(.68,.05,10,30,Math.PI), dark, 0, 0, 0);
+    var band = part(new THREE.TorusGeometry(.53,.045,10,30,Math.PI), dark, 0, .04, 0);
     head.add(band);
-    var pL = part(new THREE.CylinderGeometry(.13,.13,.1,14), dark, -.68, 0, 0);
+    var pL = part(new THREE.CylinderGeometry(.12,.12,.09,14), dark, -.52, .02, 0);
     pL.rotation.z = Math.PI/2; head.add(pL);
-    var pR = part(new THREE.CylinderGeometry(.13,.13,.1,14), dark, .68, 0, 0);
+    var pR = part(new THREE.CylinderGeometry(.12,.12,.09,14), dark, .52, .02, 0);
     pR.rotation.z = Math.PI/2; head.add(pR);
-    var micArm = part(new THREE.CylinderGeometry(.022,.022,.42,8), dark, .58, -.24, .3);
+    var micArm = part(new THREE.CylinderGeometry(.02,.02,.36,8), dark, .44, -.20, .28);
     micArm.rotation.x = 1.0; micArm.rotation.z = .5; head.add(micArm);
-    head.add(part(new THREE.SphereGeometry(.05,10,8), dark, .5, -.36, .48));
+    head.add(part(new THREE.SphereGeometry(.045,10,8), dark, .38, -.30, .44));
   }
-  else if(i===3){       // Coco — antenna with glowing tip
-    head.add(part(new THREE.CylinderGeometry(.03,.03,.42,10), dark, 0, .78, 0));
-    head.add(part(new THREE.SphereGeometry(.08,12,10), glow, 0, 1.02, 0));
+  else if(i===3){       // Coco — antenna with a glowing tip
+    head.add(part(new THREE.CylinderGeometry(.026,.026,.38,10), dark, 0, .64, 0));
+    head.add(part(new THREE.SphereGeometry(.07,12,10), glow, 0, .85, 0));
   }
-  else if(i===4){       // Sable — dark cap with brim
-    var cap = part(new THREE.SphereGeometry(.7,26,14,0,Math.PI*2,0,1.05), dark, 0, .02, 0);
-    cap.scale.set(1,.94,.98); head.add(cap);
-    head.add(part(new THREE.BoxGeometry(.54,.05,.3), dark, 0, .3, .62));
+  else if(i===4){       // Sable — cap with a brim
+    head.add(part(squircle(.97,.52,.90,6), dark, 0, .28, 0));
+    head.add(part(squircle(.52,.05,.30,3), dark, 0, .12, .58));
   }
-  else if(i===5){       // Vera — data visor across the eyes
-    head.add(part(new THREE.BoxGeometry(1.2,.19,.12), dark, 0, .08, .56));
-    head.add(part(new THREE.SphereGeometry(.042,10,8), glow, .4, .08, .64));
+  else if(i===5){       // Vera — data visor band
+    head.add(part(squircle(.86,.13,.14,3), dark, 0, .20, .44));
+    head.add(part(new THREE.SphereGeometry(.035,10,8), glow, .30, .20, .50));
   }
   else if(i===6){       // Nico — flat banker's cap
-    head.add(part(new THREE.CylinderGeometry(.48,.48,.09,24), dark, 0, .6, 0));
-    head.add(part(new THREE.BoxGeometry(.38,.055,.32), dark, 0, .57, .48));
+    head.add(part(new THREE.CylinderGeometry(.44,.44,.08,24), dark, 0, .52, 0));
+    head.add(part(squircle(.36,.05,.30,3), dark, 0, .49, .44));
   }
   else if(i===7){       // Iris — magnifier on a side arm
-    var arm = part(new THREE.CylinderGeometry(.024,.024,.4,8), dark, .58, .42, .3);
+    var arm = part(new THREE.CylinderGeometry(.022,.022,.36,8), dark, .48, .34, .26);
     arm.rotation.z = -.75; head.add(arm);
-    var lens = part(new THREE.TorusGeometry(.16,.034,10,24), shell, .82, .6, .34);
-    head.add(lens);
+    head.add(part(new THREE.TorusGeometry(.14,.03,10,24), shell, .68, .50, .30));
   }
   else if(i===8){       // Bruno — headband with a badge
-    var bandB = part(new THREE.TorusGeometry(.63,.05,10,32), dark, 0, .24, 0);
-    bandB.rotation.x = Math.PI/2; head.add(bandB);
-    head.add(part(new THREE.BoxGeometry(.19,.13,.05), shell, 0, .24, .62));
+    var bb = part(new THREE.TorusGeometry(.50,.045,10,32), dark, 0, .22, 0);
+    bb.rotation.x = Math.PI/2; head.add(bb);
+    head.add(part(squircle(.17,.12,.05,3), shell, 0, .22, .46));
   }
   else if(i===9){       // Kip — crate on the head
-    head.add(part(new THREE.BoxGeometry(.7,.32,.6), dark, 0, .68, 0));
-    head.add(part(new THREE.BoxGeometry(.74,.045,.09), shell, 0, .78, 0));
+    head.add(part(squircle(.66,.30,.58,6), dark, 0, .58, 0));
+    head.add(part(squircle(.70,.04,.08,3), shell, 0, .68, 0));
   }
   else if(i===10){      // Juno — twin side discs
-    var dL = part(new THREE.CylinderGeometry(.18,.18,.12,20), shell, -.67, .1, 0);
+    var dL = part(new THREE.CylinderGeometry(.16,.16,.11,20), shell, -.51, .06, 0);
     dL.rotation.z = Math.PI/2; head.add(dL);
-    var dR = part(new THREE.CylinderGeometry(.18,.18,.12,20), shell, .67, .1, 0);
+    var dR = part(new THREE.CylinderGeometry(.16,.16,.11,20), shell, .51, .06, 0);
     dR.rotation.z = Math.PI/2; head.add(dR);
   }
   else{                 // Echo — twin antennae
-    var a1 = part(new THREE.CylinderGeometry(.02,.02,.36,8), dark, -.19, .76, 0);
+    var a1 = part(new THREE.CylinderGeometry(.018,.018,.32,8), dark, -.17, .62, 0);
     a1.rotation.z = .3; head.add(a1);
-    var a2 = part(new THREE.CylinderGeometry(.02,.02,.36,8), dark, .19, .76, 0);
+    var a2 = part(new THREE.CylinderGeometry(.018,.018,.32,8), dark, .17, .62, 0);
     a2.rotation.z = -.3; head.add(a2);
-    head.add(part(new THREE.SphereGeometry(.055,12,10), glow, -.26, .94, 0));
-    head.add(part(new THREE.SphereGeometry(.055,12,10), glow, .26, .94, 0));
+    head.add(part(new THREE.SphereGeometry(.05,12,10), glow, -.23, .78, 0));
+    head.add(part(new THREE.SphereGeometry(.05,12,10), glow, .23, .78, 0));
   }
 
   g.userData.head = head;
