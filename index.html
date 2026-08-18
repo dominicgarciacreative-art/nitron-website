@@ -95,11 +95,36 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
 .chip svg{width:11px;height:11px;fill:currentColor;flex:none}
 @media(max-width:900px){.panel{display:none}}
 
+/* bottom-right, on the side the skills panel opens on — clear of the left-aligned CTAs */
 .hint{
-  position:absolute;left:50%;bottom:clamp(30px,5vw,54px);transform:translateX(-50%);
-  opacity:.32;transition:opacity .4s;white-space:nowrap;
+  position:absolute;right:clamp(20px,4vw,54px);bottom:clamp(30px,5vw,54px);
+  display:flex;align-items:center;gap:10px;white-space:nowrap;
+  border:1px solid rgba(255,255,255,.2);padding:11px 17px;
+  background:rgba(0,0,0,.4);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  transition:opacity .4s;
 }
-@media(max-width:900px){.hint{display:none}}
+.hint .dot{
+  width:6px;height:6px;border-radius:50%;background:#fff;flex:none;
+  box-shadow:0 0 0 0 rgba(255,255,255,.5);animation:ping 2s ease-out infinite;
+}
+@keyframes ping{
+  0%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,.45)}
+  70%{transform:scale(1.1);box-shadow:0 0 0 9px rgba(255,255,255,0)}
+  100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,0)}
+}
+.hint .on-wide{display:inline}
+.hint .on-narrow{display:none}
+/* once a bot has been opened the guide stops pulsing — they know how now */
+.hint.seen{opacity:.34}
+.hint.seen .dot{animation:none;opacity:.5}
+.hint.off{opacity:0;pointer-events:none}
+@media(max-width:900px){
+  /* sits above the headline block instead of colliding with the CTAs */
+  .hint{bottom:auto;top:0;left:50%;right:auto;transform:translateX(-50%) translateY(-130%)}
+  .hint .on-wide{display:none}
+  .hint .on-narrow{display:inline}
+}
+@media(prefers-reduced-motion:reduce){.hint .dot{animation:none}}
 
 :focus-visible{outline:2px solid #fff;outline-offset:3px}
 
@@ -134,7 +159,11 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
   </header>
 
   <div class="base">
-    <span class="mono hint" id="hint">Select a unit</span>
+    <span class="mono hint" id="hint">
+      <span class="dot"></span>
+      <span class="on-wide">Click a bot for its skills</span>
+      <span class="on-narrow">Tap a bot to meet it</span>
+    </span>
 
     <div class="copy" id="copy">
       <h1>Hire<br>a bot.</h1>
@@ -422,7 +451,7 @@ function select(b){
   elCopy.classList.add('hide');
   elCard.classList.add('on');
   document.getElementById('panel').classList.add('on');
-  elHint.style.opacity = 0;
+  elHint.classList.add('off', 'seen');
 }
 
 function clear(){
@@ -431,7 +460,7 @@ function clear(){
   elCopy.classList.remove('hide');
   elCard.classList.remove('on');
   document.getElementById('panel').classList.remove('on');
-  elHint.style.opacity = .32;
+  elHint.classList.remove('off');
 }
 
 document.getElementById('back').addEventListener('click', clear);
