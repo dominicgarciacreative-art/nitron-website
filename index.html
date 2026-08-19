@@ -274,44 +274,121 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
 stage.appendChild(renderer.domElement);
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.26));
-// gentle sky/bounce gradient so the shadow side keeps its form instead of going flat black
-scene.add(new THREE.HemisphereLight(0xffffff, 0x555555, 0.32));
+scene.add(new THREE.AmbientLight(0xffffff, 0.15));
+// gentle sky/bounce so shadow sides keep form without going grey
+scene.add(new THREE.HemisphereLight(0xffffff, 0x1c1c1c, 0.25));
 
-var key = new THREE.DirectionalLight(0xffffff, 1.12);
+var key = new THREE.DirectionalLight(0xffffff, 1.3);
 key.position.set(4.5, 9, 7);
 key.castShadow = true;
 key.shadow.mapSize.set(2048,2048);
 key.shadow.camera.left = -14; key.shadow.camera.right = 14;
 key.shadow.camera.top = 14;   key.shadow.camera.bottom = -8;
 key.shadow.camera.far = 36;
-key.shadow.bias = -0.0012;
-key.shadow.radius = 3;
+key.shadow.bias = -0.0008;
+key.shadow.normalBias = 0.02;
 scene.add(key);
 
-var rim = new THREE.DirectionalLight(0xffffff, 0.95);
+var rim = new THREE.DirectionalLight(0xffffff, 0.9);
 rim.position.set(-7, 4.5, -6);
 scene.add(rim);
 
-var fill = new THREE.DirectionalLight(0xffffff, 0.34);
+var fill = new THREE.DirectionalLight(0xffffff, 0.22);
 fill.position.set(-3, 2, 8);
 scene.add(fill);
 
 var floor = new THREE.Mesh(
   new THREE.PlaneGeometry(80,80),
-  new THREE.MeshStandardMaterial({color:0x0b0b0b, roughness:.92, metalness:0})
+  new THREE.MeshStandardMaterial({color:0x000000, roughness:.95, metalness:0, envMapIntensity:0})
 );
 floor.rotation.x = -Math.PI/2;
 floor.receiveShadow = true;
 scene.add(floor);
 
 var grid = new THREE.GridHelper(80, 52, 0xffffff, 0xffffff);
-grid.material.opacity = 0.06;
+grid.material.opacity = 0.045;
 grid.material.transparent = true;
 grid.position.y = 0.002;
 scene.add(grid);
+
+// --- one-time procedural studio environment (soft reflections for the gloss) ---
+var ENV_TEX = (function(){
+  var pmrem = new THREE.PMREMGenerator(renderer);
+  var es = new THREE.Scene();
+  es.background = new THREE.Color(0x000000);
+  function panel(w,h,x,y,z,b){
+    var m = new THREE.MeshBasicMaterial();
+    m.color.setScalar(b);                 // >1 acts as an HDR emitter in the PMREM pass
+    var p = new THREE.Mesh(new THREE.PlaneGeometry(w,h), m);
+    p.position.set(x,y,z);
+    p.lookAt(0,0,0);
+    es.add(p);
+  }
+  panel(7, 4,   0, 6,  5, 5.0);   // big overhead-front softbox: the main helmet highlight
+  panel(2.5, 6, -7, 2,  4, 2.2);  // tall left fill card
+  panel(1.5, 7,  7, 3, -3, 3.5);  // right/back rim strip
+  panel(10,10,  0,-5,  0, 0.22);  // faint floor bounce
+  var rt = pmrem.fromScene(es, 0.04);
+  pmrem.dispose();
+  es.traverse(function(o){ if(o.isMesh){ o.geometry.dispose(); o.material.dispose(); } });
+  return rt.texture;
+})();
+scene.environment = ENV_TEX;
+
+// --- shared procedural textures: one set reused by all 12 bots ---
+function _canvas(s){ var c = document.createElement('canvas'); c.width = c.height = s; return c; }
+
+// vertical knit ribs — used as color map AND bump map on the sweater
+var KNIT_TEX = (function(){
+  var c = _canvas(256), x = c.getContext('2d');
+  for(var i=0;i<256;i++){
+    var ph = (i % 16) / 16;                    // 16 ribs per tile
+    var s = Math.sin(ph * Math.PI);            // rounded rib profile
+    var v = Math.round(206 + s * 42);          // cream: 206..248
+    x.fillStyle = 'rgb(' + v + ',' + (v-3) + ',' + (v-11) + ')';
+    x.fillRect(i, 0, 1, 256);
+  }
+  x.globalAlpha = .08; x.fillStyle = '#7d7568';           // faint knit rows
+  for(var y2=0; y2<256; y2+=6){ x.fillRect(0, y2, 256, 1); }
+  x.globalAlpha = 1;
+  var t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(7, 3);
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+  return t;
+})();
+
+// soft white radial glow for the eye halos
+var GLOW_TEX = (function(){
+  var c = _canvas(128), x = c.getContext('2d');
+  var g = x.createRadialGradient(64,64,0, 64,64,64);
+  g.addColorStop(0,   'rgba(255,255,255,.45)');
+  g.addColorStop(.35, 'rgba(255,255,255,.13)');
+  g.addColorStop(1,   'rgba(255,255,255,0)');
+  x.fillStyle = g; x.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+})();
+
+// soft dark radial pool for the contact shadow (alpha baked in, so a
+// material opacity of 1 still reads as a soft 45% shadow)
+var SHADOW_TEX = (function(){
+  var c = _canvas(256), x = c.getContext('2d');
+  var g = x.createRadialGradient(128,128,10, 128,128,128);
+  g.addColorStop(0,  'rgba(0,0,0,.45)');
+  g.addColorStop(.55,'rgba(0,0,0,.18)');
+  g.addColorStop(1,  'rgba(0,0,0,0)');
+  x.fillStyle = g; x.fillRect(0,0,256,256);
+  return new THREE.CanvasTexture(c);
+})();
+
+var HALO_GEO   = new THREE.PlaneGeometry(.24, .30);
+var SHADOW_GEO = new THREE.PlaneGeometry(1.9, 1.3);
 
 function mat(rough, metal, col){
   return new THREE.MeshStandardMaterial({
@@ -359,13 +436,30 @@ function squircle(w,h,d,r,seg){
    sweater, sling strap, cargo pants, chunky sneakers. Role accessory on top. */
 function buildBot(i){
   var g = new THREE.Group();
-  var shell  = mat(.34,.04);            // helmet + sneakers
-  var cloth  = mat(.72,0,0xf2f2f2);     // knit sweater
-  var dark   = mat(.52,.04,0x141414);   // pants, strap, gloves
-  var screen = mat(.14,.12,0x090909);   // face panel
-  var glow = new THREE.MeshStandardMaterial({
-    color:0xffffff, emissive:0xffffff, emissiveIntensity:1.5,
-    roughness:.35, metalness:0, transparent:true, opacity:1
+  var shell = new THREE.MeshPhysicalMaterial({      // helmet + sneakers: glossy ABS
+    color:0xffffff, roughness:.22, metalness:0,
+    clearcoat:.6, clearcoatRoughness:.25,
+    envMapIntensity:.85, transparent:true, opacity:1
+  });
+  var cloth = new THREE.MeshStandardMaterial({      // ribbed knit sweater
+    // bump only, flat cream base: using KNIT_TEX as a colour map too banded the
+    // sweater into hard stripes (sampled 92..235 across one rib)
+    color:0xdcdad6, roughness:.92, metalness:0,
+    bumpMap:KNIT_TEX, bumpScale:.006,
+    envMapIntensity:.22, transparent:true, opacity:1
+  });
+  var dark = new THREE.MeshStandardMaterial({       // pants, strap, gloves: soft black fabric
+    color:0x0d0d0d, roughness:.72, metalness:0,
+    envMapIntensity:.55, transparent:true, opacity:1
+  });
+  var screen = new THREE.MeshPhysicalMaterial({     // face panel: black glass
+    color:0x030303, roughness:.1, metalness:0,
+    clearcoat:1, clearcoatRoughness:.12,
+    envMapIntensity:1.5, transparent:true, opacity:1
+  });
+  var glow = new THREE.MeshStandardMaterial({       // eyes + accessory tips
+    color:0xffffff, emissive:0xffffff, emissiveIntensity:2.2,
+    roughness:.4, metalness:0, transparent:true, opacity:1
   });
 
   /* Every dimension below is measured off ~/Downloads/123.png and scaled to a
@@ -379,6 +473,16 @@ function buildBot(i){
   head.add(part(squircle(.93,.66,.70,4), screen, 0, -.02, .20));      // face panel, proud of the shell
   head.add(part(squircle(.091,.187,.09,3), glow, -.225, -.06, .50));  // eyes
   head.add(part(squircle(.091,.187,.09,3), glow,  .225, -.06, .50));
+
+  // soft halo behind each eye — fake bloom, fades with the bot
+  var haloMat = new THREE.MeshBasicMaterial({
+    map:GLOW_TEX, transparent:true, opacity:1,
+    blending:THREE.AdditiveBlending, depthWrite:false
+  });
+  var hL = new THREE.Mesh(HALO_GEO, haloMat);
+  hL.position.set(-.225, -.06, .56); hL.renderOrder = 2; head.add(hL);
+  var hR = new THREE.Mesh(HALO_GEO, haloMat);
+  hR.position.set( .225, -.06, .56); hR.renderOrder = 2; head.add(hR);
   head.position.set(0, 2.26, 0);
   g.add(head);
 
@@ -387,14 +491,19 @@ function buildBot(i){
   var collar = part(new THREE.TorusGeometry(.24,.085,12,26), cloth, 0, 1.72, 0);
   collar.rotation.x = Math.PI/2; g.add(collar);
 
-  // ---- oversized knit sweater ----
+  // ---- oversized knit sweater, flared hem over the hips ----
   g.add(part(squircle(.84,.86,.72,3.4), cloth, 0, 1.22, 0));
+  g.add(part(squircle(.92,.24,.78,3.4), cloth, 0, .86, 0));           // flared hem band
 
-  // sleeves sit outboard for the dropped-shoulder silhouette
-  var aL = part(squircle(.32,.70,.34,3.6), cloth, -.47, 1.30, 0);
-  aL.rotation.z =  .04; g.add(aL);
-  var aR = part(squircle(.32,.70,.34,3.6), cloth, .47, 1.30, 0);
-  aR.rotation.z = -.04; g.add(aR);
+  // sleeves hang outboard with a touch more outward tilt; rolled cuffs at the wrist
+  var aL = part(squircle(.32,.70,.34,3.6), cloth, -.475, 1.28, 0);
+  aL.rotation.z =  .07; g.add(aL);
+  var aR = part(squircle(.32,.70,.34,3.6), cloth, .475, 1.28, 0);
+  aR.rotation.z = -.07; g.add(aR);
+  var cL = part(squircle(.35,.17,.37,3.4), cloth, -.50, .96, 0);
+  cL.rotation.z =  .07; g.add(cL);
+  var cR = part(squircle(.35,.17,.37,3.4), cloth, .50, .96, 0);
+  cR.rotation.z = -.07; g.add(cR);
 
   // ---- gloves, hanging clear of the cuffs ----
   function glove(sx){
@@ -423,11 +532,17 @@ function buildBot(i){
   g.add(part(squircle(.11,.26,.33,3), dark, -.39, .46, 0));              // cargo pockets
   g.add(part(squircle(.11,.26,.33,3), dark,  .39, .46, 0));
 
-  // ---- chunky sneakers ----
-  g.add(part(squircle(.44,.20,.64,3.4), shell, -.23, .14, .10));
-  g.add(part(squircle(.44,.20,.64,3.4), shell,  .23, .14, .10));
-  g.add(part(squircle(.46,.09,.66,3), shell, -.23, .05, .10));           // soles
-  g.add(part(squircle(.46,.09,.66,3), shell,  .23, .05, .10));
+  // ---- chunky sneakers: tilted uppers + toe caps over flat midsole slabs ----
+  var shL = part(squircle(.46,.22,.66,3.4), shell, -.23, .155, .10);
+  shL.rotation.x = -.10; g.add(shL);
+  var shR = part(squircle(.46,.22,.66,3.4), shell, .23, .155, .10);
+  shR.rotation.x = -.10; g.add(shR);
+  var tcL = part(squircle(.36,.14,.28,3.4), shell, -.23, .13, .32);
+  tcL.rotation.x = -.16; g.add(tcL);
+  var tcR = part(squircle(.36,.14,.28,3.4), shell, .23, .13, .32);
+  tcR.rotation.x = -.16; g.add(tcR);
+  g.add(part(squircle(.48,.10,.70,3), shell, -.23, .05, .10));        // midsole slabs
+  g.add(part(squircle(.48,.10,.70,3), shell,  .23, .05, .10));
 
   // ---- role accessory (rides on the head group) ----
   if(i===0){            // Milo — halo ring
@@ -495,8 +610,18 @@ function buildBot(i){
     head.add(part(new THREE.SphereGeometry(.05,12,10), glow, .23, .78, 0));
   }
 
+  // soft contact shadow pooled under the feet
+  var shadowMat = new THREE.MeshBasicMaterial({
+    map:SHADOW_TEX, transparent:true, opacity:1, depthWrite:false
+  });
+  var cs = new THREE.Mesh(SHADOW_GEO, shadowMat);
+  cs.rotation.x = -Math.PI/2;
+  cs.position.y = 0.06;      // clears the ±0.045 idle bob so it never dips under the floor
+  cs.renderOrder = 1;
+  g.add(cs);
+
   g.userData.head = head;
-  g.userData.mats = [shell, cloth, dark, screen, glow];
+  g.userData.mats = [shell, cloth, dark, screen, glow, haloMat, shadowMat];
   return g;
 }
 
