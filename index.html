@@ -430,6 +430,54 @@ function squircle(w,h,d,r,seg){
   return g;
 }
 
+/* Helmet: the base squircle re-sculpted so it is widest at the cheek line,
+   subtly narrower at the chin, with a faint brow bulge on the front face —
+   matches the reference render instead of a top/bottom-symmetric solid.
+   Cloned so the cached squircle stays pristine; cached itself, shared by all 12. */
+var _helmetGeo = null;
+function helmetGeo(){
+  if(_helmetGeo) return _helmetGeo;
+  var g = squircle(1.05,.87,.95,3.6).clone();
+  var p = g.attributes.position;
+  for(var i=0;i<p.count;i++){
+    var x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    var ny = y/.435;                                  // -1 chin .. +1 crown
+    var d1 = (ny+.18)/.62;
+    var w  = .97 + .07*Math.exp(-d1*d1);              // cheeks widest, chin+crown taper
+    var d2 = (ny-.45)/.30;
+    var b  = (z>0) ? 1 + .035*Math.exp(-d2*d2) : 1;   // faint brow bulge, front only
+    p.setXYZ(i, x*w, y, z*b);
+  }
+  g.computeVertexNormals();
+  _helmetGeo = g;
+  return g;
+}
+
+/* Two-segment curled glove finger: bend + knuckle bulge baked into the verts of
+   a single squircle, so articulation costs zero extra meshes. Cached + shared. */
+var _fingerGeo = null;
+function fingerGeo(){
+  if(_fingerGeo) return _fingerGeo;
+  var g = squircle(.058,.20,.062,3).clone();
+  var p = g.attributes.position;
+  var hinge = -.01, c = Math.cos(.55), s = Math.sin(.55);
+  for(var i=0;i<p.count;i++){
+    var x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    var k = 1 + .16*Math.exp(-Math.pow((y-hinge)/.035,2));  // knuckle bulge
+    x *= k; z *= k;
+    if(y < hinge){                       // lower segment folds back toward the body
+      var dy = y - hinge;
+      var ny2 = hinge + dy*c - z*s;
+      z = dy*s + z*c;
+      y = ny2;
+    }
+    p.setXYZ(i, x, y, z);
+  }
+  g.computeVertexNormals();
+  _fingerGeo = g;
+  return g;
+}
+
 /* One shared astronaut chassis, proportioned from the reference turnaround:
    head ~34% of total height, nearly as wide as the shoulders. Squircle helmet,
    inset black face panel with a white rim, capsule eyes, oversized knit
@@ -469,10 +517,12 @@ function buildBot(i){
 
   // ---- head ----
   var head = new THREE.Group();
-  head.add(part(squircle(1.05,.87,.95,3.6), shell, 0, 0, 0));         // helmet
-  head.add(part(squircle(.93,.66,.70,4), screen, 0, -.02, .20));      // face panel, proud of the shell
-  head.add(part(squircle(.091,.187,.09,3), glow, -.225, -.06, .50));  // eyes
-  head.add(part(squircle(.091,.187,.09,3), glow,  .225, -.06, .50));
+  head.add(part(helmetGeo(), shell, 0, 0, 0));                        // helmet
+  head.add(part(squircle(1.00,.73,.30,4), shell, 0, -.02, .36));      // raised white bezel rim
+  head.add(part(squircle(.945,.675,.30,4), dark, 0, -.02, .385));     // matte recess-shadow ring
+  head.add(part(squircle(.90,.635,.30,4), screen, 0, -.02, .415));    // glossy glass panel
+  head.add(part(squircle(.091,.187,.09,3), glow, -.225, -.08, .55));  // eyes
+  head.add(part(squircle(.091,.187,.09,3), glow,  .225, -.08, .55));
 
   // soft halo behind each eye — fake bloom, fades with the bot
   var haloMat = new THREE.MeshBasicMaterial({
@@ -480,15 +530,15 @@ function buildBot(i){
     blending:THREE.AdditiveBlending, depthWrite:false
   });
   var hL = new THREE.Mesh(HALO_GEO, haloMat);
-  hL.position.set(-.225, -.06, .56); hL.renderOrder = 2; head.add(hL);
+  hL.position.set(-.225, -.08, .61); hL.renderOrder = 2; head.add(hL);
   var hR = new THREE.Mesh(HALO_GEO, haloMat);
-  hR.position.set( .225, -.06, .56); hR.renderOrder = 2; head.add(hR);
+  hR.position.set( .225, -.08, .61); hR.renderOrder = 2; head.add(hR);
   head.position.set(0, 2.26, 0);
   g.add(head);
 
-  // ---- narrow neck + rolled collar (the reference pinches to ~0.59 here) ----
-  g.add(part(squircle(.44,.22,.42,3), cloth, 0, 1.80, 0));
-  var collar = part(new THREE.TorusGeometry(.24,.085,12,26), cloth, 0, 1.72, 0);
+  // ---- neck + chunky rolled turtleneck hugging the helmet base ----
+  g.add(part(squircle(.50,.34,.48,3), cloth, 0, 1.84, 0));
+  var collar = part(new THREE.TorusGeometry(.27,.105,14,28), cloth, 0, 1.75, 0);
   collar.rotation.x = Math.PI/2; g.add(collar);
 
   // ---- oversized knit sweater, flared hem over the hips ----
@@ -505,32 +555,39 @@ function buildBot(i){
   var cR = part(squircle(.35,.17,.37,3.4), cloth, .50, .96, 0);
   cR.rotation.z = -.07; g.add(cR);
 
-  // ---- gloves, hanging clear of the cuffs ----
+  // ---- gloves: chunky articulated fingers (bend baked into fingerGeo) ----
   function glove(sx){
     var h = new THREE.Group();
-    h.add(part(squircle(.25,.26,.21,3.4), dark, 0, 0, 0));               // palm
+    h.add(part(squircle(.26,.27,.22,3.4), dark, 0, 0, 0));            // palm
     for(var f=0; f<4; f++){
-      h.add(part(squircle(.05,.18,.055,3), dark, -.078 + f*.052, -.19, .015));
+      h.add(part(fingerGeo(), dark, -.081 + f*.054, -.20, .012));
     }
-    h.add(part(squircle(.06,.13,.06,3), dark, sx*.13, -.07, .055));      // thumb
-    h.position.set(sx*.51, .84, .02);
+    var th = part(squircle(.065,.14,.065,3), dark, sx*.135, -.06, .05);
+    th.rotation.z = sx*-.25; h.add(th);
+    h.position.set(sx*.53, .80, .02);
     return h;
   }
   g.add(glove(-1)); g.add(glove(1));
 
-  // ---- sling strap across the chest, and its back run ----
-  var sF = part(new THREE.BoxGeometry(.11,.98,.05), dark, 0, 1.24, .40);
+  // ---- sling strap with buckle, pouch riding the strap line at the hip ----
+  var sF = part(new THREE.BoxGeometry(.12,1.04,.05), dark, 0, 1.24, .385);
   sF.rotation.z = .60; g.add(sF);
-  var sB = part(new THREE.BoxGeometry(.11,.98,.05), dark, 0, 1.24, -.40);
+  var sB = part(new THREE.BoxGeometry(.12,1.04,.05), dark, 0, 1.24, -.385);
   sB.rotation.z = -.60; g.add(sB);
-  g.add(part(squircle(.24,.19,.13,3.4), dark, .36, .90, .30));           // hip pouch
+  var bk = part(new THREE.BoxGeometry(.17,.14,.075), dark, .16, 1.01, .40);
+  bk.rotation.z = .60; g.add(bk);
+  g.add(part(squircle(.30,.24,.16,3.4), dark, .33, .87, .33));        // hip pouch
 
-  // ---- baggy cargo pants ----
-  g.add(part(squircle(.82,.34,.68,3.4), dark, 0, .72, 0));               // hips
-  g.add(part(squircle(.38,.72,.46,3.4), dark, -.20, .44, 0));
-  g.add(part(squircle(.38,.72,.46,3.4), dark,  .20, .44, 0));
-  g.add(part(squircle(.11,.26,.33,3), dark, -.39, .46, 0));              // cargo pockets
-  g.add(part(squircle(.11,.26,.33,3), dark,  .39, .46, 0));
+  // ---- baggy cargo pants with ankle scrunch ----
+  g.add(part(squircle(.84,.36,.70,3.4), dark, 0, .72, 0));            // hips
+  g.add(part(squircle(.42,.74,.50,3.4), dark, -.21, .43, 0));
+  g.add(part(squircle(.42,.74,.50,3.4), dark,  .21, .43, 0));
+  g.add(part(squircle(.44,.17,.52,3.4), dark, -.21, .21, .01));       // ankle scrunch
+  g.add(part(squircle(.44,.17,.52,3.4), dark,  .21, .21, .01));
+  g.add(part(squircle(.14,.30,.36,4), dark, -.42, .44, .02));         // cargo pockets
+  g.add(part(squircle(.14,.30,.36,4), dark,  .42, .44, .02));
+  g.add(part(squircle(.16,.09,.38,4), dark, -.42, .585, .02));        // pocket flaps
+  g.add(part(squircle(.16,.09,.38,4), dark,  .42, .585, .02));
 
   // ---- chunky sneakers: tilted uppers + toe caps over flat midsole slabs ----
   var shL = part(squircle(.46,.22,.66,3.4), shell, -.23, .155, .10);
@@ -555,11 +612,11 @@ function buildBot(i){
     head.add(part(new THREE.SphereGeometry(.045,10,8), dark, .27, .58, 0));
   }
   else if(i===2){       // Ruby — headset + mic
-    var band = part(new THREE.TorusGeometry(.53,.045,10,30,Math.PI), dark, 0, .04, 0);
+    var band = part(new THREE.TorusGeometry(.56,.045,10,30,Math.PI), dark, 0, .04, 0);
     head.add(band);
-    var pL = part(new THREE.CylinderGeometry(.12,.12,.09,14), dark, -.52, .02, 0);
+    var pL = part(new THREE.CylinderGeometry(.12,.12,.09,14), dark, -.56, .02, 0);
     pL.rotation.z = Math.PI/2; head.add(pL);
-    var pR = part(new THREE.CylinderGeometry(.12,.12,.09,14), dark, .52, .02, 0);
+    var pR = part(new THREE.CylinderGeometry(.12,.12,.09,14), dark, .56, .02, 0);
     pR.rotation.z = Math.PI/2; head.add(pR);
     var micArm = part(new THREE.CylinderGeometry(.02,.02,.36,8), dark, .44, -.20, .28);
     micArm.rotation.x = 1.0; micArm.rotation.z = .5; head.add(micArm);
@@ -596,9 +653,9 @@ function buildBot(i){
     head.add(part(squircle(.70,.04,.08,3), shell, 0, .68, 0));
   }
   else if(i===10){      // Juno — twin side discs
-    var dL = part(new THREE.CylinderGeometry(.16,.16,.11,20), shell, -.51, .06, 0);
+    var dL = part(new THREE.CylinderGeometry(.16,.16,.11,20), shell, -.55, .06, 0);
     dL.rotation.z = Math.PI/2; head.add(dL);
-    var dR = part(new THREE.CylinderGeometry(.16,.16,.11,20), shell, .51, .06, 0);
+    var dR = part(new THREE.CylinderGeometry(.16,.16,.11,20), shell, .55, .06, 0);
     dR.rotation.z = Math.PI/2; head.add(dR);
   }
   else{                 // Echo — twin antennae
