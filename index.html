@@ -178,8 +178,8 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
       <h1>Hire<br>a bot.</h1>
       <p class="sub">AI bots that work like staff. Named, built by hand, handed over ready to work. Hire from the lineup — or name the job, and we'll build the bot for it.</p>
       <div class="cta-row">
-        <a class="cta" href="mailto:hello@nitron.studio?subject=Pilot%20slot">Claim a pilot slot</a>
-        <a class="cta-alt" href="mailto:hello@nitron.studio?subject=Custom%20bot">Customize your own</a>
+        <a class="cta" href="mailto:dominicgarcia.nitro@gmail.com?subject=Pilot%20slot">Claim a pilot slot</a>
+        <a class="cta-alt" href="mailto:dominicgarcia.nitro@gmail.com?subject=Custom%20bot">Customize your own</a>
       </div>
     </div>
 
@@ -189,8 +189,8 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
       <div class="mono role" id="cRole">Admin</div>
       <p class="does" id="cDoes"></p>
       <div class="card-acts">
-        <a class="cta" id="cHire" href="mailto:hello@nitron.studio?subject=Pilot%20slot">Hire this bot</a>
-        <a class="cta-alt" id="cCustom" href="mailto:hello@nitron.studio?subject=Custom%20bot">Customize this one</a>
+        <a class="cta" id="cHire" href="mailto:dominicgarcia.nitro@gmail.com?subject=Pilot%20slot">Hire this bot</a>
+        <a class="cta-alt" id="cCustom" href="mailto:dominicgarcia.nitro@gmail.com?subject=Custom%20bot">Customize this one</a>
         <button class="back" id="back">Back to lineup</button>
       </div>
     </div>
@@ -209,8 +209,8 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
     <h1 style="font-size:clamp(46px,10vw,110px)">Hire a bot.</h1>
     <p class="sub" style="margin:20px auto 0">AI bots that work like staff.</p>
     <div class="cta-row" style="justify-content:center">
-      <a class="cta" href="mailto:hello@nitron.studio?subject=Pilot%20slot">Claim a pilot slot</a>
-      <a class="cta-alt" href="mailto:hello@nitron.studio?subject=Custom%20bot">Customize your own</a>
+      <a class="cta" href="mailto:dominicgarcia.nitro@gmail.com?subject=Pilot%20slot">Claim a pilot slot</a>
+      <a class="cta-alt" href="mailto:dominicgarcia.nitro@gmail.com?subject=Custom%20bot">Customize your own</a>
     </div>
   </div>
 </div>
@@ -755,8 +755,8 @@ function select(b){
   document.getElementById('cName').textContent = info.name;
   document.getElementById('cRole').textContent = info.role;
   document.getElementById('cDoes').textContent = info.does;
-  document.getElementById('cHire').href = 'mailto:hello@nitron.studio?subject=' + encodeURIComponent('Hire ' + info.name);
-  document.getElementById('cCustom').href = 'mailto:hello@nitron.studio?subject=' + encodeURIComponent('Customize a bot like ' + info.name);
+  document.getElementById('cHire').href = 'mailto:dominicgarcia.nitro@gmail.com?subject=' + encodeURIComponent('Hire ' + info.name);
+  document.getElementById('cCustom').href = 'mailto:dominicgarcia.nitro@gmail.com?subject=' + encodeURIComponent('Customize a bot like ' + info.name);
   document.getElementById('pSkills').innerHTML = info.skills.map(function(s){ return '<li>' + s + '</li>'; }).join('');
   document.getElementById('pConns').innerHTML = info.conns.map(function(c){
     var p = ICONS[c] ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICONS[c] + '"/></svg>' : '';
