@@ -387,6 +387,57 @@ var SHADOW_TEX = (function(){
   return new THREE.CanvasTexture(c);
 })();
 
+/* ---- extra surface detail: face-panel gradient + fabric weave ----
+   Tone values re-authored for the sRGB pipeline (the source spec assumed linear
+   output, which would render these roughly twice too bright). The spec's floor
+   light-pool is deliberately skipped — a lit floor fights the black void. */
+var MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
+function _canvasTex(cnv, repX, repY){
+  var t = new THREE.CanvasTexture(cnv);
+  if(repX){ t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repX, repY); }
+  t.anisotropy = Math.min(4, MAX_ANISO);
+  return t;
+}
+/* soft woven-fabric noise: a 32px random field smoothly upscaled, plus fine grain */
+function _noiseCanvas(size, base, amp, grain){
+  var lo = document.createElement('canvas'); lo.width = 32; lo.height = 32;
+  var lctx = lo.getContext('2d');
+  var img = lctx.createImageData(32,32), d = img.data, i, v;
+  for(i=0;i<d.length;i+=4){
+    v = base + (Math.random()*2-1)*amp;
+    v = v<0?0:(v>255?255:v);
+    d[i]=d[i+1]=d[i+2]=v; d[i+3]=255;
+  }
+  lctx.putImageData(img,0,0);
+  var c = document.createElement('canvas'); c.width = c.height = size;
+  var ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(lo,0,0,size,size);
+  var g = ctx.getImageData(0,0,size,size), gd = g.data;
+  for(i=0;i<gd.length;i+=4){
+    v = gd[i] + (Math.random()*2-1)*grain;
+    v = v<0?0:(v>255?255:v);
+    gd[i]=gd[i+1]=gd[i+2]=v;
+  }
+  ctx.putImageData(g,0,0);
+  return c;
+}
+function _vGradCanvas(w,h,stops){
+  var c = document.createElement('canvas'); c.width=w; c.height=h;
+  var ctx = c.getContext('2d');
+  var g = ctx.createLinearGradient(0,0,0,h);
+  for(var i=0;i<stops.length;i++) g.addColorStop(stops[i][0], stops[i][1]);
+  ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+  return c;
+}
+var TEX = {
+  fabric: _canvasTex(_noiseCanvas(128,128,42,9), 3, 3),
+  /* canvas top row = uv.y=1 = top of the squircle (flipY defaults true), so the
+     glass reads lit at the brow and falls off toward the chin, as in the render */
+  panelMap:   _canvasTex(_vGradCanvas(8,128,[[0,'#141416'],[0.38,'#08080a'],[1,'#030303']])),
+  panelRough: _canvasTex(_vGradCanvas(8,128,[[0,'#1f1f1f'],[0.55,'#6f6f6f'],[1,'#a8a8a8']]))
+};
+
 var HALO_GEO   = new THREE.PlaneGeometry(.24, .30);
 var SHADOW_GEO = new THREE.PlaneGeometry(1.9, 1.3);
 
@@ -509,6 +560,13 @@ function buildBot(i){
     color:0xffffff, emissive:0xffffff, emissiveIntensity:2.2,
     roughness:.4, metalness:0, transparent:true, opacity:1
   });
+
+  // shared surface detail (canvases built once); materials stay per-bot
+  dark.bumpMap = TEX.fabric; dark.bumpScale = .002;   // whisper of weave on pants/strap/gloves
+  screen.color.setHex(0xffffff);                      // a map multiplies colour — must be white
+  screen.map = TEX.panelMap;                          // vertical sheen: lit brow -> dark chin
+  screen.roughnessMap = TEX.panelRough;               // glossy top, softer bottom = curved glass
+  screen.roughness = 1.0;                             // the map now carries the value
 
   /* Every dimension below is measured off ~/Downloads/123.png and scaled to a
      2.70-unit figure (505px tall in the reference => 0.005347 units per px).
