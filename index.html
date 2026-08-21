@@ -287,9 +287,9 @@ var key = new THREE.DirectionalLight(0xffffff, 1.3);
 key.position.set(4.5, 9, 7);
 key.castShadow = true;
 key.shadow.mapSize.set(2048,2048);
-key.shadow.camera.left = -14; key.shadow.camera.right = 14;
-key.shadow.camera.top = 14;   key.shadow.camera.bottom = -8;
-key.shadow.camera.far = 36;
+key.shadow.camera.left = -8;  key.shadow.camera.right = 8;
+key.shadow.camera.top = 7;    key.shadow.camera.bottom = -2;
+key.shadow.camera.far = 26;
 key.shadow.bias = -0.0008;
 key.shadow.normalBias = 0.02;
 scene.add(key);
@@ -453,6 +453,7 @@ function part(g, m, x, y, z){
   var mesh = new THREE.Mesh(g, m);
   mesh.position.set(x,y,z);
   mesh.castShadow = true;
+  mesh.receiveShadow = true;   // self-shadowing: without this the parts read as stuck together
   return mesh;
 }
 
@@ -600,7 +601,11 @@ function buildBot(i){
   collar.rotation.x = Math.PI/2; g.add(collar);
 
   // ---- oversized knit sweater, flared hem over the hips ----
-  g.add(part(squircle(.84,.86,.72,3.4), cloth, 0, 1.22, 0));
+  g.add(part(squircle(.88,.86,.74,3.4), cloth, 0, 1.22, 0));
+  // shoulder yoke: spans torso AND sleeves so the garment reads as one mass with
+  // dropped shoulders. Without it the sleeves look like boxes stuck on the sides,
+  // which self-shadowing only makes more obvious.
+  g.add(part(squircle(1.24,.36,.78,3.0), cloth, 0, 1.50, 0));
   g.add(part(squircle(.92,.24,.78,3.4), cloth, 0, .86, 0));           // flared hem band
 
   // sleeves hang outboard with a touch more outward tilt; rolled cuffs at the wrist
