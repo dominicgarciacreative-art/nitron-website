@@ -199,8 +199,6 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
   <aside class="panel" id="panel" aria-live="polite">
     <span class="mono p-label">Skills &amp; capabilities</span>
     <ul class="p-skills" id="pSkills"></ul>
-    <span class="mono p-label">Connectors</span>
-    <div class="chips" id="pConns"></div>
   </aside>
 </div>
 
@@ -449,13 +447,13 @@ function iconTexture(name){
   x.beginPath();
   x.moveTo(r,3); x.arcTo(S-3,3,S-3,S-3,r); x.arcTo(S-3,S-3,3,S-3,r);
   x.arcTo(3,S-3,3,3,r); x.arcTo(3,3,S-3,3,r); x.closePath();
-  x.fillStyle = 'rgba(8,8,8,.94)';   x.fill();
-  x.strokeStyle = 'rgba(255,255,255,.34)'; x.lineWidth = 3; x.stroke();
+  x.fillStyle = '#f4f4f4';   x.fill();
+  x.strokeStyle = 'rgba(0,0,0,.18)'; x.lineWidth = 2; x.stroke();
   var d = ICONS[name];
   if(d && window.Path2D){
     var pad = 33, sc = (S - pad*2)/24;      // simple-icons author on a 24x24 grid
     x.save(); x.translate(pad,pad); x.scale(sc,sc);
-    x.fillStyle = '#fff'; x.fill(new Path2D(d)); x.restore();
+    x.fillStyle = '#111'; x.fill(new Path2D(d)); x.restore();
   }
   var t = new THREE.CanvasTexture(c);
   t.anisotropy = Math.min(4, MAX_ANISO);
@@ -481,14 +479,17 @@ function buildConnectors(info){
     });
     var sp = new THREE.Sprite(m);
     sp.scale.setScalar(.40);
-    sp.userData.a0 = (k/n) * Math.PI*2;                 // evenly spaced around the ring
-    // orbit the torso/head, not the feet — low badges collided with the name card
-    sp.userData.y  = 1.30 + (k % 3) * .55;              // staggered heights
-    // elliptical orbit: wide in x, shallow in z. A circular one put a badge dead
-    // centre in front of the face on every pass, and near-camera magnification made
-    // it huge — this sweeps them out to the sides instead.
-    sp.userData.rx = 1.95 + ((k % 2) ? .25 : 0);
-    sp.userData.rz = 0.95 + ((k % 2) ? .12 : 0);
+    // badges hold station either side of the unit and just bob — no orbit, so a
+    // mark never parks in front of the face or swings across the name card
+    // All badges sit LEFT of the unit: the skills panel starts at 71% of the
+    // viewport, which works out to world x=1.35 at this depth, and the bot is
+    // nearly that wide — so there is no clearance on the right. Left of the unit
+    // with skills on the right also balances the composition.
+    var tier = k % 3, col = Math.floor(k / 3);
+    sp.userData.hx = -(1.30 + col * .52);
+    sp.userData.hy = 1.70 + tier * .42 + col * .21;   // staggered, clear of the name card
+    sp.userData.hz = FRONT_Z + .30 - col * .25;
+    sp.userData.ph = k * 1.7;                            // desynced bob phase
     sp.visible = false;
     CONN_GROUP.add(sp);
     connSprites.push(sp);
@@ -878,11 +879,7 @@ function select(b){
   document.getElementById('cHire').href = 'mailto:dominicgarcia.nitro@gmail.com?subject=' + encodeURIComponent('Hire ' + info.name);
   document.getElementById('cCustom').href = 'mailto:dominicgarcia.nitro@gmail.com?subject=' + encodeURIComponent('Customize a bot like ' + info.name);
   document.getElementById('pSkills').innerHTML = info.skills.map(function(s){ return '<li>' + s + '</li>'; }).join('');
-  buildConnectors(info);
-  document.getElementById('pConns').innerHTML = info.conns.map(function(c){
-    var p = ICONS[c] ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICONS[c] + '"/></svg>' : '';
-    return '<span class="chip">' + p + c + '</span>';
-  }).join('');
+  buildConnectors(info);   // connectors are the floating badges now, not panel chips
   elCopy.classList.add('hide');
   elCard.classList.add('on');
   document.getElementById('panel').classList.add('on');
@@ -1009,10 +1006,10 @@ function tick(){
   // orbit + fade the connector badges around the unit at FRONT_Z
   var connTo = selected ? 1 : 0;
   for(var q=0;q<connSprites.length;q++){
-    var sp = connSprites[q], u = sp.userData, ang = u.a0 + t*0.32;
-    sp.position.set(Math.cos(ang)*u.rx,
-                    u.y + Math.sin(t*1.05 + q*0.9)*0.055,
-                    FRONT_Z + Math.sin(ang)*u.rz);
+    var sp = connSprites[q], u = sp.userData;
+    sp.position.set(u.hx,
+                    u.hy + Math.sin(t*0.9 + u.ph) * 0.07,   // gentle float
+                    u.hz);
     sp.material.opacity += (connTo - sp.material.opacity) * 0.07;
     sp.visible = sp.material.opacity > 0.012;
   }
