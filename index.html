@@ -438,6 +438,63 @@ var TEX = {
   panelRough: _canvasTex(_vGradCanvas(8,128,[[0,'#1f1f1f'],[0.55,'#6f6f6f'],[1,'#a8a8a8']]))
 };
 
+/* ---- floating connector badges that orbit the selected unit ----
+   Each brand mark is drawn from the same ICONS path data used by the spec-sheet
+   chips, via Path2D, onto a rounded dark tile so it matches the panel styling. */
+var _iconTex = {};
+function iconTexture(name){
+  if(_iconTex[name]) return _iconTex[name];
+  var S = 128, c = document.createElement('canvas'); c.width = c.height = S;
+  var x = c.getContext('2d'), r = 26;
+  x.beginPath();
+  x.moveTo(r,3); x.arcTo(S-3,3,S-3,S-3,r); x.arcTo(S-3,S-3,3,S-3,r);
+  x.arcTo(3,S-3,3,3,r); x.arcTo(3,3,S-3,3,r); x.closePath();
+  x.fillStyle = 'rgba(8,8,8,.94)';   x.fill();
+  x.strokeStyle = 'rgba(255,255,255,.34)'; x.lineWidth = 3; x.stroke();
+  var d = ICONS[name];
+  if(d && window.Path2D){
+    var pad = 33, sc = (S - pad*2)/24;      // simple-icons author on a 24x24 grid
+    x.save(); x.translate(pad,pad); x.scale(sc,sc);
+    x.fillStyle = '#fff'; x.fill(new Path2D(d)); x.restore();
+  }
+  var t = new THREE.CanvasTexture(c);
+  t.anisotropy = Math.min(4, MAX_ANISO);
+  _iconTex[name] = t;
+  return t;
+}
+
+var CONN_GROUP = new THREE.Group();
+scene.add(CONN_GROUP);
+var connSprites = [];
+
+function buildConnectors(info){
+  for(var i=0;i<connSprites.length;i++){
+    CONN_GROUP.remove(connSprites[i]);
+    connSprites[i].material.dispose();
+  }
+  connSprites = [];
+  var n = info.conns.length;
+  for(var k=0;k<n;k++){
+    var m = new THREE.SpriteMaterial({
+      map: iconTexture(info.conns[k]),
+      transparent:true, opacity:0, depthWrite:false
+    });
+    var sp = new THREE.Sprite(m);
+    sp.scale.setScalar(.40);
+    sp.userData.a0 = (k/n) * Math.PI*2;                 // evenly spaced around the ring
+    // orbit the torso/head, not the feet — low badges collided with the name card
+    sp.userData.y  = 1.30 + (k % 3) * .55;              // staggered heights
+    // elliptical orbit: wide in x, shallow in z. A circular one put a badge dead
+    // centre in front of the face on every pass, and near-camera magnification made
+    // it huge — this sweeps them out to the sides instead.
+    sp.userData.rx = 1.95 + ((k % 2) ? .25 : 0);
+    sp.userData.rz = 0.95 + ((k % 2) ? .12 : 0);
+    sp.visible = false;
+    CONN_GROUP.add(sp);
+    connSprites.push(sp);
+  }
+}
+
 var HALO_GEO   = new THREE.PlaneGeometry(.24, .30);
 var SHADOW_GEO = new THREE.PlaneGeometry(1.9, 1.3);
 
@@ -821,6 +878,7 @@ function select(b){
   document.getElementById('cHire').href = 'mailto:dominicgarcia.nitro@gmail.com?subject=' + encodeURIComponent('Hire ' + info.name);
   document.getElementById('cCustom').href = 'mailto:dominicgarcia.nitro@gmail.com?subject=' + encodeURIComponent('Customize a bot like ' + info.name);
   document.getElementById('pSkills').innerHTML = info.skills.map(function(s){ return '<li>' + s + '</li>'; }).join('');
+  buildConnectors(info);
   document.getElementById('pConns').innerHTML = info.conns.map(function(c){
     var p = ICONS[c] ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICONS[c] + '"/></svg>' : '';
     return '<span class="chip">' + p + c + '</span>';
@@ -832,6 +890,11 @@ function select(b){
 }
 
 function clear(){
+  if(selected){
+    // take the short way back from the auto-spin instead of rewinding whole turns
+    var tau = Math.PI*2, ry = ((selected.rotation.y % tau) + tau) % tau;
+    selected.rotation.y = ry > Math.PI ? ry - tau : ry;
+  }
   selected = null;
   elCopy.classList.remove('hide');
   elCard.classList.remove('on');
@@ -929,7 +992,8 @@ function tick(){
     b.position.lerp(d.tPos, 0.2);
     var s = b.scale.x + (d.tScale - b.scale.x) * 0.12;
     b.scale.setScalar(s);
-    b.rotation.y += (d.tRotY - b.rotation.y) * 0.12;
+    if(b === selected && !REDUCED) b.rotation.y += 0.0045;   // slow turntable while open
+    else                            b.rotation.y += (d.tRotY - b.rotation.y) * 0.12;
 
     for(var m=0;m<d.mats.length;m++){
       d.mats[m].opacity += (d.tOpacity - d.mats[m].opacity) * 0.1;
@@ -940,6 +1004,17 @@ function tick(){
       /* selected bot keeps its face to the camera; the rest look around */
       d.head.rotation.y = Math.sin(t*0.62 + i) * (b === selected ? 0.06 : 0.16);
     }
+  }
+
+  // orbit + fade the connector badges around the unit at FRONT_Z
+  var connTo = selected ? 1 : 0;
+  for(var q=0;q<connSprites.length;q++){
+    var sp = connSprites[q], u = sp.userData, ang = u.a0 + t*0.32;
+    sp.position.set(Math.cos(ang)*u.rx,
+                    u.y + Math.sin(t*1.05 + q*0.9)*0.055,
+                    FRONT_Z + Math.sin(ang)*u.rz);
+    sp.material.opacity += (connTo - sp.material.opacity) * 0.07;
+    sp.visible = sp.material.opacity > 0.012;
   }
 
   renderer.render(scene, camera);
