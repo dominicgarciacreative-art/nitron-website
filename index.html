@@ -79,7 +79,7 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
 .panel{
   position:fixed;right:clamp(20px,4vw,54px);top:50%;
   transform:translateY(-50%) translateX(16px);
-  width:min(300px,30vw);opacity:0;pointer-events:none;
+  width:min(258px,27vw);opacity:0;pointer-events:none;   /* narrowed to leave room for right-hand badges */
   background:rgba(0,0,0,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   padding:24px 22px;border:1px solid rgba(255,255,255,.1);
   transition:opacity .45s ease,transform .45s cubic-bezier(.2,.8,.3,1);
@@ -481,14 +481,15 @@ function buildConnectors(info){
     sp.scale.setScalar(.40);
     // badges hold station either side of the unit and just bob — no orbit, so a
     // mark never parks in front of the face or swings across the name card
-    // All badges sit LEFT of the unit: the skills panel starts at 71% of the
-    // viewport, which works out to world x=1.35 at this depth, and the bot is
-    // nearly that wide — so there is no clearance on the right. Left of the unit
-    // with skills on the right also balances the composition.
-    var tier = k % 3, col = Math.floor(k / 3);
-    sp.userData.hx = -(1.30 + col * .52);
-    sp.userData.hy = 1.70 + tier * .42 + col * .21;   // staggered, clear of the name card
-    sp.userData.hz = FRONT_Z + .30 - col * .25;
+    // Split either side of the unit. The right side is tight: the skills panel
+    // starts at ~75% of the viewport (world x ~1.42 at this depth once the badge's
+    // own half-width is allowed for), so right-hand badges hug the unit while the
+    // left ones can spread. Heights are staggered to clear the bottom-left card.
+    var side = (k % 2) ? 1 : -1, tier = Math.floor(k / 2);
+    sp.userData.hx = side < 0 ? -(1.28 + (tier % 2) * .44)
+                              :  (1.08 + (tier % 2) * .22);
+    sp.userData.hy = 1.68 + tier * .50 + (side > 0 ? .24 : 0);
+    sp.userData.hz = FRONT_Z + .30 - (tier % 2) * .22;
     sp.userData.ph = k * 1.7;                            // desynced bob phase
     sp.visible = false;
     CONN_GROUP.add(sp);
