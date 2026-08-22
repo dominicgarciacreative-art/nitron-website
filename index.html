@@ -34,6 +34,16 @@ canvas{display:block}
 .nav .tag{opacity:.42}
 .nav a{color:#fff;text-decoration:none;opacity:.55;transition:opacity .2s}
 .nav a:hover{opacity:1}
+/* hidden until a track is confirmed loadable, so a missing file leaves no dead control */
+.snd{
+  background:none;border:1px solid rgba(255,255,255,.25);color:#fff;cursor:pointer;
+  width:28px;height:28px;padding:0;display:none;align-items:center;justify-content:center;
+  opacity:.5;transition:opacity .2s,border-color .2s;
+}
+.snd.ready{display:inline-flex}
+.snd:hover{opacity:1;border-color:#fff}
+.snd.on{opacity:1;border-color:rgba(255,255,255,.7)}
+.snd svg{width:13px;height:13px;fill:currentColor;display:block}
 @media(max-width:640px){.nav .tag{display:none}}
 
 .base{position:relative;padding:0 clamp(20px,4vw,54px) clamp(30px,5vw,54px)}
@@ -161,6 +171,9 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(56px,10
       <a href="nitron-match.html">Match</a>
     <a href="nitron-about.html">About</a>
       <a href="nitron-contact.html">Contact</a>
+      <button class="snd" id="snd" type="button" aria-pressed="false" aria-label="Play ambient sound" title="Ambient sound">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path id="sndIcon" d="M4 9v6h4l5 4V5L8 9H4zm11.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z"/></svg>
+      </button>
     </nav>
   </header>
 
@@ -1036,6 +1049,73 @@ function resize(){
 window.addEventListener('resize', resize);
 resize();
 
+})();
+</script>
+
+<script>
+/* Ambient audio.
+   Deliberately OFF by default and gated behind a click: browsers block autoplay
+   with sound, and unrequested audio is hostile anyway. Drop a looping track next
+   to this file as nitron-ambient.mp3 and the control appears by itself; with no
+   file present it stays hidden rather than showing a button that does nothing.
+   Home page only — a multi-page site restarts the audio on every navigation. */
+(function(){
+  var SRC = 'nitron-ambient.mp3', VOL = 0.32, FADE = 900;
+  var btn = document.getElementById('snd');
+  if(!btn) return;
+
+  var ICON_ON  = 'M4 9v6h4l5 4V5L8 9H4zm11.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z';
+  var ICON_OFF = 'M4 9v6h4l5 4V5L8 9H4zm12.6 3l2.2-2.2-1.1-1.1L15.5 11l-2.2-2.2-1.1 1.1L14.4 12l-2.2 2.2 1.1 1.1 2.2-2.2 2.2 2.2 1.1-1.1L16.6 12z';
+  var icon = document.getElementById('sndIcon');
+
+  var a = new Audio();
+  a.loop = true; a.preload = 'auto'; a.volume = 0;
+  var playing = false, timer = null;
+
+  a.addEventListener('canplaythrough', function(){ btn.classList.add('ready'); }, {once:true});
+  a.addEventListener('error', function(){ btn.classList.remove('ready'); });
+  a.src = SRC;
+
+  function ramp(to, done){
+    clearInterval(timer);
+    var from = a.volume, t0 = Date.now();
+    timer = setInterval(function(){
+      var k = Math.min(1, (Date.now()-t0)/FADE);
+      a.volume = from + (to-from)*k;
+      if(k === 1){ clearInterval(timer); if(done) done(); }
+    }, 40);
+  }
+
+  function setOn(v){
+    playing = v;
+    btn.classList.toggle('on', v);
+    btn.setAttribute('aria-pressed', v ? 'true' : 'false');
+    btn.setAttribute('aria-label', v ? 'Mute ambient sound' : 'Play ambient sound');
+    icon.setAttribute('d', v ? ICON_ON : ICON_OFF);
+    try{ localStorage.setItem('nitron-sound', v ? '1' : '0'); }catch(e){}
+  }
+
+  btn.addEventListener('click', function(){
+    if(playing){
+      ramp(0, function(){ a.pause(); });
+      setOn(false);
+    } else {
+      a.play().then(function(){ ramp(VOL); setOn(true); })
+              .catch(function(){ /* blocked or unplayable — leave it off */ });
+    }
+  });
+
+  // don't keep playing to an empty room
+  document.addEventListener('visibilitychange', function(){
+    if(!playing) return;
+    if(document.hidden) a.pause(); else a.play().catch(function(){});
+  });
+
+  setOn(false);   // start muted regardless of any stored preference
+  try{
+    // only surface the previous choice as a hint; still needs a click to start
+    if(localStorage.getItem('nitron-sound') === '1') btn.classList.add('ready');
+  }catch(e){}
 })();
 </script>
 
