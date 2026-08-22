@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nitron — Services</title>
-<meta name="description" content="Beyond bots: custom dashboards and design systems, built by Nitron.">
+<title>Nitron — Pricing</title>
+<meta name="description" content="Nitron pricing — single bots, bot teams and full AI operations. Setup and monthly retainer.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1080 1080'%3E%3Crect x='74.4' y='69.25' width='917' height='917' rx='104.44' fill='%23000'/%3E%3Cg fill='%23fff'%3E%3Crect x='496.15' y='487.37' width='27.85' height='45.25' rx='11.19'/%3E%3Crect x='546.2' y='487.62' width='27.85' height='45.25' rx='11.19'/%3E%3Cpolygon points='761.39 298.45 645.57 298.45 416.27 298.45 416.27 411.94 302.08 411.94 302.08 638.91 302.06 638.91 302.06 700.71 358.41 757.05 420.22 757.05 530.95 757.05 530.95 638.91 420.22 638.91 420.22 416.59 645.57 416.59 645.57 643.57 763.71 643.57 763.71 298.45 761.39 298.45'/%3E%3Crect x='291.32' y='277.29' width='56.1' height='56.1'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,42 +42,57 @@ a{color:inherit}
 h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(48px,9vw,110px);line-height:.9;letter-spacing:-.035em}
 .lead{margin-top:26px;font-size:14px;line-height:1.75;opacity:.65;max-width:52ch}
 
-.svc{border-top:1px solid rgba(255,255,255,.1);padding:clamp(36px,5vw,56px) 0;display:grid;grid-template-columns:130px 1fr auto;gap:clamp(18px,3vw,40px);align-items:baseline}
-.svc.feat{
-  border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.035);
-  padding:clamp(28px,4vw,48px);margin-bottom:clamp(28px,4vw,44px);
+h2{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(26px,4vw,42px);letter-spacing:-.02em;line-height:1}
+.sec{padding:clamp(34px,5vw,60px) 0;border-top:1px solid rgba(255,255,255,.1)}
+.sec-head{display:flex;flex-direction:column;gap:16px;margin-bottom:32px}
+
+/* three tiers, equal columns, hairline gaps like the rest of the site */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:1px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12)}
+.tier{background:#000;padding:30px 26px;display:flex;flex-direction:column}
+.tier .idx{opacity:.4;display:block;margin-bottom:16px}
+.tier h3{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:26px;letter-spacing:-.01em;line-height:1.05}
+.tier .who{margin-top:10px;font-size:12.5px;line-height:1.6;opacity:.5;min-height:2.6em}
+.price{margin-top:22px;padding-top:20px;border-top:1px solid rgba(255,255,255,.12)}
+.price .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px}
+.price .k{opacity:.42}
+.price .v{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;white-space:nowrap}
+.tier ul{list-style:none;margin:20px 0 26px}
+.tier li{font-size:12.5px;line-height:1.55;opacity:.72;padding:7px 0;border-top:1px solid rgba(255,255,255,.09);display:flex;gap:9px}
+.tier li::before{content:'+';opacity:.4}
+.tier .go{
+  margin-top:auto;align-self:flex-start;text-decoration:none;color:#fff;
+  border:1px solid rgba(255,255,255,.3);padding:14px 24px;
+  font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;
+  transition:transform .2s ease,border-color .2s;
 }
-.feat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12);margin-top:26px}
-.feat-cell{background:#060606;padding:20px 22px}
-.feat-cell .k{opacity:.45;display:block;margin-bottom:10px}
-.feat-cell p{margin-top:0;font-size:12.5px}
-.feat-acts{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px;align-items:center}
+.tier .go:hover{border-color:#fff;transform:translateY(-2px)}
+.tier.mid{background:rgba(255,255,255,.035)}
+
+/* add-ons: plain priced rows */
+.rows{border:1px solid rgba(255,255,255,.12)}
+.arow{display:flex;justify-content:space-between;align-items:baseline;gap:20px;padding:18px 24px;border-top:1px solid rgba(255,255,255,.1)}
+.arow:first-child{border-top:0}
+.arow .n{font-size:13.5px;opacity:.8}
+.arow .p{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;white-space:nowrap}
+
+/* launch offer — the one deliberately loud block on the page */
+.offer{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.045);padding:clamp(28px,4vw,44px);margin-bottom:clamp(60px,8vw,110px)}
+.offer ul{list-style:none;margin-top:24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12)}
+.offer li{background:#060606;padding:20px 22px;font-size:12.5px;line-height:1.6;opacity:.8}
+.offer li b{display:block;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;opacity:1;margin-bottom:7px}
+p{font-size:13.5px;line-height:1.75;opacity:.65;max-width:60ch}
+.note{margin-top:18px;font-size:12.5px;opacity:.45;max-width:60ch}
 .cta{
   display:inline-block;background:#fff;color:#000;text-decoration:none;
   font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;
-  padding:16px 30px;transition:transform .2s ease;
+  padding:16px 30px;transition:transform .2s ease;margin-top:26px;
 }
 .cta:hover{transform:translateY(-2px)}
-.svc:last-of-type{border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:clamp(60px,8vw,110px)}
-.svc .idx{opacity:.35}
-.svc h2{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(28px,4.4vw,48px);letter-spacing:-.02em;line-height:1}
-.svc p{margin-top:14px;font-size:13.5px;line-height:1.75;opacity:.6;max-width:52ch}
-.svc .go{
-  text-decoration:none;border:1px solid rgba(255,255,255,.3);padding:15px 28px;
-  font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:500;white-space:nowrap;
-  transition:transform .2s ease,border-color .2s;
-}
-.svc .go:hover{border-color:#fff;transform:translateY(-2px)}
-@media(max-width:720px){
-  .svc{grid-template-columns:1fr}
-  .svc .idx{order:-1}
-  .svc .go{justify-self:start}
-}
 
 .foot{border-top:1px solid rgba(255,255,255,.1);padding:30px clamp(20px,4vw,54px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .foot .mono{opacity:.35}
 </style>
-</head>
+
 <body>
 
 <header class="bar">
@@ -95,8 +110,8 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(48px,9v
   </a>
   <nav class="nav mono">
     <a href="index.html">Bots</a>
-    <a href="nitron-services.html" aria-current="page">Services</a>
-      <a href="nitron-pricing.html">Pricing</a>
+    <a href="nitron-services.html">Services</a>
+      <a href="nitron-pricing.html" aria-current="page">Pricing</a>
     <a href="nitron-match.html">Match</a>
     <a href="nitron-about.html">About</a>
     <a href="nitron-contact.html">Contact</a>
@@ -106,51 +121,102 @@ h1{font-family:'Phonk','Syne',sans-serif;font-weight:800;font-size:clamp(48px,9v
 <main class="wrap">
 
   <div class="hero">
-    <span class="mono eyebrow">Services</span>
-    <h1>What we<br>build.</h1>
-    <p class="lead">Bots first — that's the flagship. Dashboards and design systems ship from the same workshop, with the same hands, to the same standard.</p>
+    <span class="mono eyebrow">Pricing</span>
+    <h1>What it<br>costs.</h1>
+    <p class="lead">Every bot is built by hand, so there is a one-off setup and a monthly retainer that keeps it running, tuned and supported. Ranges depend on how much of your workflow it has to learn.</p>
   </div>
 
-  <div class="svc feat">
-    <span class="mono idx">01 · Flagship</span>
-    <div>
-      <h2>AI bots</h2>
-      <p>Named AI teammates that work like staff, living in the chat your team already uses — Discord, Slack, WhatsApp.</p>
-      <div class="feat-grid">
-        <div class="feat-cell">
-          <span class="mono k">Prebuilt units</span>
-          <p>Hire straight from the lineup — Milo, Pizza, Ruby, Coco, Sable. Proven roles, ready in days.</p>
+  <div class="sec" style="border-top:0;padding-top:0">
+    <div class="tiers">
+
+      <div class="tier">
+        <span class="mono idx">Tier 01</span>
+        <h3>Single Bot</h3>
+        <p class="who">One role — admin, creative or support.</p>
+        <div class="price">
+          <div class="row"><span class="mono k">Setup</span><span class="v">$500–1,500</span></div>
+          <div class="row"><span class="mono k">Retainer</span><span class="v">$150–400<span style="opacity:.45;font-size:12px">/mo</span></span></div>
         </div>
-        <div class="feat-cell">
-          <span class="mono k">Custom builds</span>
-          <p>Your own unit, built to order — your workflow, your tone, your rules. Named by you.</p>
+        <ul>
+          <li>1 persona</li>
+          <li>1–2 integrations</li>
+          <li>Standard prompt vault</li>
+          <li>Email support</li>
+        </ul>
+        <a class="mono go" href="mailto:dominicgarcia.nitro@gmail.com?subject=Tier%201%20-%20Single%20Bot">Start here</a>
+      </div>
+
+      <div class="tier mid">
+        <span class="mono idx">Tier 02</span>
+        <h3>Bot Team</h3>
+        <p class="who">Two to four bots working together.</p>
+        <div class="price">
+          <div class="row"><span class="mono k">Setup</span><span class="v">$2,000–5,000</span></div>
+          <div class="row"><span class="mono k">Retainer</span><span class="v">$500–1,200<span style="opacity:.45;font-size:12px">/mo</span></span></div>
         </div>
+        <ul>
+          <li>Multi-bot handoffs</li>
+          <li>Notion / Figma / Slack wiring</li>
+          <li>Custom SOPs</li>
+          <li>Monthly tuning call</li>
+        </ul>
+        <a class="mono go" href="mailto:dominicgarcia.nitro@gmail.com?subject=Tier%202%20-%20Bot%20Team">Start here</a>
       </div>
-      <div class="feat-acts">
-        <a class="cta" href="index.html">Meet the lineup</a>
-        <a class="mono go" href="mailto:dominicgarcia.nitro@gmail.com?subject=Custom%20bot">Customize your own</a>
+
+      <div class="tier">
+        <span class="mono idx">Tier 03</span>
+        <h3>AI Operations</h3>
+        <p class="who">Department-level. Replaces real headcount.</p>
+        <div class="price">
+          <div class="row"><span class="mono k">Setup</span><span class="v">$6,000–15,000</span></div>
+          <div class="row"><span class="mono k">Retainer</span><span class="v">$1,500–3,500<span style="opacity:.45;font-size:12px">/mo</span></span></div>
+        </div>
+        <ul>
+          <li>Full workflow mapping</li>
+          <li>Meeting-joining agents</li>
+          <li>Reporting dashboards</li>
+          <li>Priority turnaround</li>
+        </ul>
+        <a class="mono go" href="mailto:dominicgarcia.nitro@gmail.com?subject=Tier%203%20-%20AI%20Operations">Start here</a>
       </div>
+
     </div>
   </div>
 
-  <div class="svc">
-    <span class="mono idx">02</span>
-    <div>
-      <h2>Custom dashboards</h2>
-      <p>Ops consoles and internal tools built around your data — the same screens our own bots report into. Live numbers, dark and quiet, no spreadsheet safari.</p>
+  <div class="sec">
+    <div class="sec-head">
+      <span class="mono eyebrow" style="margin:0">Add-ons</span>
+      <h2>Bolt on as you grow.</h2>
     </div>
-    <a class="mono go" href="mailto:dominicgarcia.nitro@gmail.com?subject=Custom%20dashboard">Enquire</a>
+    <div class="rows">
+      <div class="arow"><span class="n">Extra bot on an existing retainer</span><span class="p">$400–800 setup &nbsp;·&nbsp; +$100–250/mo</span></div>
+      <div class="arow"><span class="n">New integration</span><span class="p">$300–600 each</span></div>
+      <div class="arow"><span class="n">Persona / voice rework</span><span class="p">$250</span></div>
+      <div class="arow"><span class="n">Team training session</span><span class="p">$500</span></div>
+    </div>
   </div>
 
-  <div class="svc">
-    <span class="mono idx">03</span>
-    <div>
-      <h2>Design systems</h2>
-      <p>Tokens, type, components — one source of truth so everything you ship looks like you. Documented, handed over, yours.</p>
+  <div class="sec">
+    <div class="sec-head">
+      <span class="mono eyebrow" style="margin:0">Custom work</span>
+      <h2>Something bigger?</h2>
     </div>
-    <a class="mono go" href="mailto:dominicgarcia.nitro@gmail.com?subject=Design%20system">Enquire</a>
+    <p>Need a design system or dashboard built alongside your bots? Message us — we'll scope it and quote it properly. Typically starts at <strong style="color:#fff">$2,500</strong>.</p>
+    <a class="cta" href="mailto:dominicgarcia.nitro@gmail.com?subject=Custom%20work%20enquiry">Scope a project</a>
   </div>
 
+  <div class="sec" style="border-top:0">
+    <div class="offer">
+      <span class="mono eyebrow" style="margin:0 0 16px">Launch offer</span>
+      <h2>Get going for free.</h2>
+      <ul>
+        <li><b>Free 2-week onboarding</b>We set up your bots and teach your team to run them.</li>
+        <li><b>First month free</b>No retainer until month two.</li>
+        <li><b>Cancel anytime</b>No lock-in contracts.</li>
+      </ul>
+      <a class="cta" href="mailto:dominicgarcia.nitro@gmail.com?subject=Launch%20offer%20-%20pilot%20slot">Claim a pilot slot</a>
+    </div>
+  </div>
 
 </main>
 
